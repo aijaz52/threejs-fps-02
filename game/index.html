@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round Tactical</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: ui-monospace, Menlo, Consolas, monospace; color: #e8f0f2; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { position: fixed; inset: 0; pointer-events: none; user-select: none; }
+  .panel { position: absolute; background: rgba(8, 14, 18, .62); border: 1px solid rgba(120, 220, 200, .22); border-radius: 6px; padding: 6px 10px; letter-spacing: .04em; }
+  #top { top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 18px; align-items: center; }
+  #round-timer { font-size: 22px; font-weight: 700; color: #9fffe0; min-width: 64px; text-align: center; }
+  #team-scores { display: flex; gap: 14px; font-size: 13px; }
+  #score-ct { color: #6fb6ff; }
+  #score-t { color: #ffb36f; }
+  #round-number { top: 12px; right: 12px; font-size: 13px; }
+  #bottom-left { left: 14px; bottom: 14px; display: flex; align-items: baseline; gap: 14px; }
+  #health { font-size: 26px; font-weight: 700; color: #8fffa8; }
+  #armor { font-size: 18px; color: #7fd4ff; }
+  #ammo { right: 14px; bottom: 14px; font-size: 26px; font-weight: 700; color: #ffe08a; }
+  #weapon-name { right: 14px; bottom: 52px; font-size: 12px; color: #b9c6cc; text-align: right; }
+  #kill-feed { position: absolute; top: 64px; right: 14px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; font-size: 12px; }
+  #kill-feed div { background: rgba(8, 14, 18, .62); padding: 3px 8px; border-radius: 4px; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: #9fffe0; box-shadow: 0 0 6px rgba(159, 255, 224, .8); }
+  #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
+  #minimap { position: absolute; top: 12px; left: 12px; width: 168px; height: 168px; border: 1px solid rgba(120, 220, 200, .3); border-radius: 6px; background: rgba(4, 10, 12, .7); }
+  #buy-menu { left: 50%; bottom: 90px; transform: translateX(-50%); min-width: 320px; display: none; pointer-events: auto; }
+  #buy-menu.open { display: block; }
+  #buy-title { font-size: 12px; color: #9fffe0; margin-bottom: 6px; letter-spacing: .12em; }
+  #buy-menu button { display:block; width:100%; padding:6px; margin:3px 0; text-align:left; cursor:pointer; }
+  #banner { top:24%; left:50%; transform:translateX(-50%); text-align:center; }
+  #banner:empty, #objective:empty { display:none; }
+  #objective { bottom:100px; left:50%; transform:translateX(-50%); }
+  #progress { position:absolute; bottom:78px; left:40%; width:20%; height:12px; }
+  #scoreboard { top:25%; left:20%; width:60%; line-height:1.8; }
+  #flash-overlay { position:fixed; inset:0; background:white; opacity:0; pointer-events:none; z-index:5; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.min.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <canvas id="minimap"></canvas>
+  <div id="banner" class="panel"></div>
+  <div id="objective" class="panel"></div>
+  <progress id="progress" max="1" value="0" hidden></progress>
+  <div id="scoreboard" class="panel" hidden></div>
+  <div id="top">
+    <div id="team-scores" class="panel"><span id="score-ct">CT 0</span><span id="score-t">T 0</span></div>
+    <div id="round-timer" class="panel">0:00</div>
+  </div>
+  <div id="round-number" class="panel">ROUND 0</div>
+  <div id="kill-feed"></div>
+  <div id="crosshair"></div>
+  <div id="bottom-left" class="panel"><span id="health">100</span><span id="armor">0</span></div>
+  <div id="weapon-name" class="panel">RIFLE</div>
+  <div id="ammo" class="panel">0 / 0</div>
+  <div id="buy-menu" class="panel open">
+    <div id="buy-title">BUY MENU</div>
+    <div id="buy-items"></div>
+  </div>
+</div>
+<div id="flash-overlay"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

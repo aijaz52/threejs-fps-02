@@ -1,0 +1,7 @@
+out/
+*.log
+step*.prompt
+step*.exit
+shots.mjs
+shot*.png
+ref/
