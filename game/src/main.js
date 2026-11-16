@@ -18,13 +18,22 @@ const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(75, 1, .05
 const world = buildWorld(scene), input = new Input(canvas), player = new Player({ camera, world, input });
 const effects = new Effects(scene), audio = new Audio(), hud = new Hud();
 let bots = null;
+let tauntTime = 0;
+const taunts = ['Mid belongs to us.', 'Watch the next corner.', 'Your footsteps gave you away.'];
 const rounds = new Rounds({ players: [player], world, onEvent: (event) => {
-  if (event.type === 'kill') hud.killFeed(`${event.killer?.id ?? 'World'} → ${event.victim.id}`);
+  if (event.type === 'kill') {
+    hud.killFeed(`${event.killer?.id ?? 'World'} → ${event.victim.id} · ${CONFIG.weapons[event.weapon]?.name || 'World'}${event.headshot ? ' · ⊕ HEADSHOT' : ''}`);
+    if (event.killer && event.killer.team !== player.team && tauntTime <= 0 && Math.random() < .3) {
+      hud.killFeed(`${event.killer.id}: ${taunts[Math.floor(Math.random() * taunts.length)]}`); tauntTime = 18;
+    }
+  }
   if (event.type === 'win') {
     hud.killFeed(`${event.team} wins · ${event.reason}`); audio.stinger(event.team === player.team);
+    hud.showBanner(event.team === player.team ? 'ROUND WIN' : 'ROUND LOSS', 5, `${event.team} · ${event.reason.toUpperCase()}`);
   }
-  if (event.type === 'plant') hud.killFeed(`SPECTRE planted at ${event.site}`);
-  if (event.type === 'round') bots?.buy();
+  if (event.type === 'plant') { hud.killFeed(`SPECTRE planted at ${event.site}`); hud.showBanner('BOMB PLANTED', 3, `SPECTRE · SITE ${event.site}`); }
+  if (event.type === 'match') hud.showBanner('MATCH OVER', 6, `${event.team} WINS`);
+  if (event.type === 'round') { bots?.buy(); hud.bannerLife = 0; }
   if (event.type === 'live') { hud.menu = false; audio.stinger(true); }
 } });
 bots = new Bots({ scene, world, config: CONFIG, rounds });
@@ -69,11 +78,14 @@ function controls() {
   }
 }
 function tick(dt) {
+  tauntTime = Math.max(0, tauntTime - dt);
   controls(); player.simulate(dt);
+  const blinded = player.blinded;
   player.blinded = Math.max(0, (player.blinded || 0) - dt);
   rounds.pickupBomb(player);
   rounds.interact(player, input.locked && input.isDown('KeyE'));
   weaponSystem.update(dt);
+  if (player.blinded > blinded) hud.showBanner('FLASHBANG', player.blinded + 1);
   bots.update(dt, player); rounds.simulate(dt); effects.update(dt); hud.updateFeed(dt);
   if (previousPhase !== rounds.phase) {
     if (rounds.phase === 'buy') {

@@ -27,6 +27,11 @@ export class Bots {
          reload: 0, reaction: .3, target: null, heard: new THREE.Vector3(), hearing: 0, posture: 0,
          strafe: Math.random() < .5 ? -1 : 1, strafeTime: 0, retreat: 0, jumpTime: 1 + Math.random() * 3,
          jumpVelocity: 0, burst: 0, cover: new THREE.Vector3(), coverTime: 0 };
+      const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 64;
+      b.tagContext = canvas.getContext('2d'); b.tagHealth = -1;
+      b.tagTexture = new THREE.CanvasTexture(canvas); b.tagTexture.colorSpace = THREE.SRGBColorSpace;
+      b.tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: b.tagTexture, depthWrite: false }));
+      b.tag.name = `Crosstown/tag-${b.id}`; b.tag.scale.set(2.6, .65, 1); body.add(b.tag);
       b.reset = (spawn) => this.reset(b, spawn); scene.add(body); this.bots.push(b); rounds.players.push(b);
       rounds.money.set(b.id, config.rounds.startMoney); b.reset(side ? world.spawnB : world.spawnA);
     }
@@ -178,6 +183,17 @@ export class Bots {
       }
       b.body.position.copy(b.position); b.body.rotation.y = b.yaw;
       b.body.scale.y = b.crouching ? .7 : 1;
+      b.tag.position.y = 2.25 / b.body.scale.y;
+      b.tag.scale.y = .65 / b.body.scale.y;
+      if (b.tagHealth !== b.health) {
+        const c = b.tagContext; b.tagHealth = b.health;
+        c.clearRect(0, 0, 256, 64); c.fillStyle = 'rgba(8,14,18,.8)'; c.fillRect(0, 0, 256, 64);
+        c.fillStyle = b.team === player.team ? '#8dc6ff' : '#ffac86';
+        c.font = 'bold 22px monospace'; c.textAlign = 'center'; c.fillText(b.id, 128, 28);
+        c.fillStyle = '#403b3e'; c.fillRect(14, 42, 228, 10);
+        c.fillStyle = b.team === player.team ? '#9fffe0' : '#ff806c';
+        c.fillRect(14, 42, 228 * Math.max(0, Math.min(1, b.health / 100)), 10); b.tagTexture.needsUpdate = true;
+      }
     }
   }
 }

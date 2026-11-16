@@ -106,5 +106,25 @@ export function buildWorld(scene) {
     marking.rotation.x = -Math.PI / 2; marking.position.set(site.x, .05, site.z);
     scene.add(marking);
   }
+  for (const [text, subtitle, x, z, turn] of [
+    ['CROSSTOWN', 'EVERY CORNER TELLS A STORY', -24, -5.9, 0],
+    ['NIGHT SHIFT', 'KEEP THE STREETLIGHTS BURNING', 24, 5.9, Math.PI],
+  ]) {
+    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 192;
+    const c = canvas.getContext('2d'); c.fillStyle = '#23383e'; c.fillRect(0, 0, 512, 192);
+    c.strokeStyle = '#c99468'; c.lineWidth = 8; c.strokeRect(10, 10, 492, 172);
+    c.fillStyle = '#fff3d8'; c.textAlign = 'center'; c.font = 'bold 54px monospace'; c.fillText(text, 256, 90);
+    c.fillStyle = '#9fffe0'; c.font = '18px monospace'; c.fillText(subtitle, 256, 138);
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(6, 2.25), new THREE.MeshBasicMaterial({ map: texture }));
+    sign.name = `Crosstown/billboard-${text}`; sign.position.set(x, 4.6, z); sign.rotation.y = turn; scene.add(sign);
+  }
+  const lampMaterial = new THREE.MeshLambertMaterial({ color: 0xffdf9c, emissive: 0xffc66c, emissiveIntensity: 1.2 });
+  for (const x of [-53.3, 53.3]) for (const z of [-10, 10]) {
+    box('lamp-post', x, 2.4, z, .18, 4.8, .18, p.trim, false);
+    box('lamp-arm', x + (x < 0 ? .4 : -.4), 4.8, z, 1, .14, .18, p.trim, false);
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(.65, .18, .4), lampMaterial);
+    tip.name = 'Crosstown/lamp-tip'; tip.position.set(x + (x < 0 ? .7 : -.7), 4.7, z); scene.add(tip);
+  }
   return { colliders, spawnA, spawnB, bombsiteA, bombsiteB, solids };
 }

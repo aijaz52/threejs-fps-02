@@ -112,7 +112,7 @@ export class Rounds {
     return true;
   }
 
-  eliminate(victim, killer = null) {
+  eliminate(victim, killer = null, weapon = killer?.weapon, headshot = false) {
     if (this.phase !== 'live' || !victim.alive || !this.players.includes(victim)) return false;
     victim.alive = false;
     victim.health = 0;
@@ -122,18 +122,18 @@ export class Rounds {
     }
     if (this.interaction?.player === victim) this.interaction = null;
     if (killer && killer !== victim && killer.team !== victim.team) this.award(killer, MONEY_REWARD.kill);
-    this.onEvent({ type: 'kill', victim, killer });
+    this.onEvent({ type: 'kill', victim, killer, weapon, headshot });
     this.checkElimination();
     return true;
   }
 
-  damage(victim, amount, attacker = null) {
+  damage(victim, amount, attacker = null, weapon = attacker?.weapon, headshot = false) {
     if (this.phase !== 'live' || !victim.alive || !this.players.includes(victim)
       || (attacker && attacker.team === victim.team)) return false;
     const absorbed = Math.min(victim.armor || 0, amount * CONFIG.armorDamageFactor);
     victim.armor = Math.max(0, (victim.armor || 0) - absorbed);
     victim.health = Math.max(0, victim.health - (amount - absorbed));
-    if (victim.health === 0) this.eliminate(victim, attacker);
+    if (victim.health === 0) this.eliminate(victim, attacker, weapon, headshot);
     return true;
   }
 

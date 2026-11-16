@@ -21,18 +21,39 @@ export class WeaponSystem {
       mesh.visible = false; effects.scene.add(mesh);
       this.grenades.push({ mesh, velocity: new THREE.Vector3(), life: 0 });
     }
+    this.view = new THREE.Group(); this.view.name = 'Crosstown/viewmodel';
+    this.viewKick = this.viewFlash = this.bobTime = 0;
+    const box = new THREE.BoxGeometry(1, 1, 1), palette = config.palette;
+    const part = (color, x, y, z, w, h, d) => {
+      const mesh = new THREE.Mesh(box, new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false }));
+      mesh.position.set(x, y, z); mesh.scale.set(w, h, d); mesh.renderOrder = 20;
+      this.view.add(mesh); return mesh;
+    };
+    this.receiver = part(palette.darkCrate, 0, 0, 0, .14, .13, .34);
+    this.barrel = part(palette.trim, 0, .025, -.25, .065, .065, .22);
+    this.muzzle = part(palette.trim, 0, .025, -.37, .09, .085, .035);
+    this.grip = part(palette.crate, 0, -.12, .08, .09, .21, .12);
+    this.sight = part(palette.siteB, 0, .09, -.06, .035, .045, .06);
+    this.blade = part(palette.plaster, 0, .015, -.22, .045, .09, .43);
+    this.flare = part(0xffdf8a, 0, .025, -.41, .14, .14, .07);
+    this.flare.visible = false; player.camera.add(this.view); effects.scene.add(player.camera);
     player.weaponSystem = this; this.sync();
   }
   get current() { return this.loadout[this.currentSlot]; }
   sync() {
     const state = this.ammo[this.current]; this.player.weapon = this.current;
     this.player.mag = state.mag; this.player.reserve = state.reserve; this.loadout.armor = this.player.armor;
+    const knife = this.current === 'knife', rifle = this.currentSlot === 'primary';
+    this.receiver.visible = this.barrel.visible = this.muzzle.visible = this.sight.visible = !knife;
+    this.blade.visible = knife; this.receiver.scale.z = rifle ? .48 : .34;
+    this.view.scale.setScalar(rifle ? 1.08 : 1);
   }
   reset() {
     if (!this.player.alive) { this.loadout.primary = null; this.loadout.grenades.length = 0; }
     for (const id in this.ammo) { const w = this.config.weapons[id]; this.ammo[id].mag = w.mag || 0; this.ammo[id].reserve = w.reserve || 0; }
     this.currentSlot = this.loadout.primary ? 'primary' : 'secondary';
     this.reloadWeapon = null;
+    this.viewKick = this.viewFlash = this.bobTime = 0;
     this.reloadTime = this.cooldown = this.bloom = this.kickPitch = this.kickYaw = 0; this.sync();
     for (const g of this.grenades) { g.life = 0; g.mesh.visible = false; }
   }
@@ -55,7 +76,7 @@ export class WeaponSystem {
   }
   damage(target, amount, head, shooter = this.player) {
     if (target.team === shooter.team) return;
-    this.rounds?.damage(target, amount * (head ? this.config.headshotMultiplier : 1), shooter);
+    this.rounds?.damage(target, amount * (head ? this.config.headshotMultiplier : 1), shooter, shooter.weapon, head);
   }
   shootActor(actor, id, origin, direction, extraSpread = 0) {
     const w = this.config.weapons[id], speed = Math.hypot(actor.velocity.x, actor.velocity.z);
@@ -82,6 +103,7 @@ export class WeaponSystem {
     if (w.melee) return this.knife();
     if (!a.mag) { this.reload(); return false; }
     this.cooldown = 60 / w.rpm; a.mag--;
+    this.viewKick = 1; this.viewFlash = .045;
     this.origin.copy(this.player.camera.position); this.forward.set(0, 0, -1).applyEuler(this.player.camera.rotation);
     this.shootActor(this.player, this.current, this.origin, this.forward, this.bloom);
     this.bloom = Math.min(0.045, this.bloom + w.spread * 0.45);
@@ -91,6 +113,7 @@ export class WeaponSystem {
   }
   knife() {
     this.cooldown = 0.6;
+    this.viewKick = 1;
     this.origin.copy(this.player.camera.position); this.forward.set(0, 0, -1).applyEuler(this.player.camera.rotation);
     const hit = this.ray.cast(this.origin, this.forward, 2.2, this.rounds.players, this.player);
     if (hit.target) { this.damage(hit.target, this.config.weapons.knife.dmg, false); this.effects.bloodPuff(hit.point); }
@@ -158,6 +181,13 @@ export class WeaponSystem {
       } else g.mesh.position.addScaledVector(g.velocity, dt);
       if (g.life <= 0) { g.mesh.visible = false; this.detonate(g.mesh.position); }
     }
+    this.viewKick = Math.max(0, this.viewKick - dt * 8); this.viewFlash = Math.max(0, this.viewFlash - dt);
+    const speed = this.player.grounded ? Math.min(1, Math.hypot(this.player.velocity.x, this.player.velocity.z) / 6) : 0;
+    this.bobTime += dt * (4 + speed * 7);
+    const dip = this.reloadTime > 0 ? Math.sin(Math.PI * Math.min(1, this.reloadTime / (this.config.weapons[this.current].reloadTime || 1.8))) : 0;
+    this.view.position.set(.26 + Math.sin(this.bobTime) * .012 * speed, -.22 + Math.cos(this.bobTime * 2) * .009 * speed - dip * .22, -.52 + this.viewKick * .065);
+    this.view.rotation.set(this.viewKick * .13 - dip * .6, 0, -.06 + dip * .3);
+    this.view.visible = this.player.alive; this.flare.visible = this.viewFlash > 0 && this.current !== 'knife';
     this.loadout.armor = this.player.armor; this.player.updateCamera();
   }
 }

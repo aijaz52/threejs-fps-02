@@ -17,6 +17,7 @@ export class Hud {
       this.feed.push({ node, life: 0 });
     }
     this.rows = [];
+    this.bannerLife = 0; this.bannerText = '';
   }
   update({ health, armor, ammo, reserve, weapon, roundTime, scores, roundNumber, money, phase }) {
     const e = this.el, sec = Math.max(0, Math.ceil(roundTime));
@@ -35,7 +36,13 @@ export class Hud {
     const p = this.feed[this.feedIndex++ % this.feed.length]; p.node.textContent = text; p.node.hidden = false;
     p.life = 6; this.el['kill-feed'].prepend(p.node);
   }
-  updateFeed(dt) { for (const p of this.feed) if (p.life > 0) { p.life -= dt; p.node.hidden = p.life <= 0; } }
+  showBanner(text, seconds = 3, detail = '') {
+    this.bannerText = detail ? `${text}\n${detail}` : text; this.bannerLife = seconds;
+  }
+  updateFeed(dt) {
+    for (const p of this.feed) if (p.life > 0) { p.life -= dt; p.node.hidden = p.life <= 0; }
+    this.bannerLife = Math.max(0, this.bannerLife - dt);
+  }
   renderBuy(config, buy) {
     this.el['buy-items'].replaceChildren(); this.buyItems.length = 0;
     const catalog = { ...config.weapons, ...config.grenades, ...config.equipment };
@@ -77,8 +84,10 @@ export class Hud {
   }
   objective(rounds, player, tab) {
     const e = this.el, action = rounds.interaction;
-    e.banner.textContent = rounds.phase === 'over' ? `${rounds.winner} WINS · ${rounds.reason.toUpperCase()}`
+    e.banner.textContent = this.bannerLife > 0 ? this.bannerText : rounds.phase === 'over' ? ''
       : rounds.phase === 'buy' ? 'FREEZE / BUY · B to shop · Click arena to play' : !player.alive ? 'ELIMINATED · Next round soon' : '';
+    e.banner.style.opacity = this.bannerLife > 0 ? Math.min(1, this.bannerLife / .8) : 1;
+    e.banner.classList.toggle('announcement', this.bannerLife > 0);
     const type = rounds.bomb.planted ? 'defuse' : 'plant';
     e.objective.textContent = action ? `${action.player.id} · ${action.type.toUpperCase()}`
       : rounds.canInteract(player, type) ? `Hold E to ${type}` : rounds.bomb.planted ? 'SPECTRE PLANTED · RETAKE' : '';
